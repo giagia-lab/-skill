@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate finance tracking spec Excel from JSON."""
+"""Generate finance tracking spec Excel from JSON (view + click only)."""
 
 from __future__ import annotations
 
@@ -23,7 +23,6 @@ COLUMNS = [
     "*事件英文名称",
     "页面名称",
     "*页面英文名称",
-    "*前导页面",
     "模块名称",
     "*模块英文名称",
     "元素名称",
@@ -41,9 +40,9 @@ HEADER_FONT = Font(bold=True, color="FFFFFF", size=11)
 HEADER_ALIGN = Alignment(horizontal="center", vertical="center", wrap_text=True)
 BODY_ALIGN = Alignment(vertical="top", wrap_text=True)
 
-COL_WIDTHS = [10, 26, 36, 26, 36, 28, 14, 20, 20, 28, 12, 14, 22, 40, 18, 16]
+COL_WIDTHS = [10, 26, 36, 26, 36, 14, 20, 20, 28, 12, 14, 22, 24, 18, 16]
 
-CATEGORY = {"view": "浏览事件", "exposure": "曝光事件", "click": "点击事件"}
+CATEGORY = {"view": "浏览事件", "click": "点击事件"}
 
 
 def load_spec(path: Path) -> dict:
@@ -52,17 +51,12 @@ def load_spec(path: Path) -> dict:
 
 
 def get_events_config(spec: dict) -> dict:
-    """Support both new `events` block and legacy flat page fields."""
     page = spec["page"]
     events = spec.get("events", {})
     return {
         "view": events.get("view", {
             "name_cn": page.get("view_event_cn", f"{page.get('product_line', '')}浏览事件".strip()),
             "name_en": page.get("view_event_en", "finance_home_view"),
-        }),
-        "exposure": events.get("exposure", {
-            "name_cn": page.get("exposure_event_cn", f"{page.get('product_line', '')}曝光事件".strip()),
-            "name_en": page.get("exposure_event_en", "finance_home_show"),
         }),
         "click": events.get("click", {
             "name_cn": page.get("click_event_cn", f"{page.get('product_line', '')}点击事件".strip()),
@@ -92,28 +86,7 @@ def build_rows(spec: dict) -> list[list]:
             item.get("event_name_en") or events_cfg["view"]["name_en"],
             page_cn,
             page_en,
-            item.get("from_page", ""),
             "", "", "", "",
-            item.get("location", ""),
-            product_code,
-            remarks(page_remarks, item.get("remarks", "")),
-            item.get("explanation", ""),
-            item.get("legacy_event_id", ""),
-            item.get("change_date", default_date),
-        ])
-
-    for item in spec.get("exposure_events", []):
-        rows.append([
-            CATEGORY["exposure"],
-            item.get("event_name_cn") or events_cfg["exposure"]["name_cn"],
-            item.get("event_name_en") or events_cfg["exposure"]["name_en"],
-            page_cn,
-            page_en,
-            "",
-            item.get("module_cn", ""),
-            item.get("module_en", ""),
-            item.get("element_cn", ""),
-            item.get("element_en", ""),
             item.get("location", ""),
             product_code,
             remarks(page_remarks, item.get("remarks", "")),
@@ -129,7 +102,6 @@ def build_rows(spec: dict) -> list[list]:
             item.get("event_name_en") or events_cfg["click"]["name_en"],
             page_cn,
             page_en,
-            "",
             item.get("module_cn", ""),
             item.get("module_en", ""),
             item.get("element_cn", ""),
@@ -146,8 +118,7 @@ def build_rows(spec: dict) -> list[list]:
 
 
 def merge_event_columns(ws, rows: list[list]) -> None:
-    """Merge 事件名称 & *事件英文名称 when consecutive rows share same values."""
-    merge_cols = (2, 3)  # B, C
+    merge_cols = (2, 3)
     n = len(rows)
     if n == 0:
         return
@@ -198,7 +169,6 @@ def write_excel(rows: list[list], output: Path, sheet_name: str = "埋点提报"
 
 
 def collect_rows_from_document(document: dict) -> tuple[list[list], str]:
-    """Build Excel rows from single-page or multi-page (`pages` array) spec."""
     if "pages" in document:
         sheet_name = document.get("sheet_name", "埋点提报")
         default_date = document.get("change_date", date.today().isoformat())
@@ -215,7 +185,6 @@ def collect_rows_from_document(document: dict) -> tuple[list[list], str]:
                 },
                 "events": page_spec.get("events", {}),
                 "view_events": page_spec.get("view_events", []),
-                "exposure_events": page_spec.get("exposure_events", []),
                 "click_events": page_spec.get("click_events", []),
             }
             all_rows.extend(build_rows(spec))
@@ -229,37 +198,27 @@ def collect_rows_from_document(document: dict) -> tuple[list[list], str]:
 def summarize_document(document: dict, rows: list[list]) -> str:
     if "pages" in document:
         view_n = sum(len(p.get("view_events", [])) for p in document["pages"])
-        exp_n = sum(len(p.get("exposure_events", [])) for p in document["pages"])
         click_n = sum(len(p.get("click_events", [])) for p in document["pages"])
         return (
             f"页面数: {len(document['pages'])} | "
-            f"浏览 {view_n} | 曝光 {exp_n} | 点击 {click_n} | 合计 {len(rows)}"
+            f"浏览 {view_n} | 点击 {click_n} | 合计 {len(rows)}"
         )
 
     view_n = len(document.get("view_events", []))
-    exp_n = len(document.get("exposure_events", []))
     click_n = len(document.get("click_events", []))
     page = document.get("page", {})
     return (
         f"页面: {page.get('name_cn', '')} ({page.get('name_en', '')})\n"
-        f"浏览 {view_n} | 曝光 {exp_n} | 点击 {click_n} | 合计 {len(rows)}"
+        f"浏览 {view_n} | 点击 {click_n} | 合计 {len(rows)}"
     )
-
-
-def summarize(spec: dict, rows: list[list]) -> str:
-    return summarize_document(spec, rows)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate tracking spec Excel")
-    parser.add_argument("--input", "-i", required=True, help="JSON spec file path (single or multi-page)")
-    parser.add_argument("--output", "-o", help="Output xlsx path (default: same name as input)")
-    parser.add_argument("--sheet", help="Worksheet name (default: from JSON sheet_name / page.sheet_name)")
-    parser.add_argument(
-        "--remove-input",
-        action="store_true",
-        help="Delete input JSON after successful Excel generation (excel-only deliverable)",
-    )
+    parser = argparse.ArgumentParser(description="Generate Guojin tracking spec Excel")
+    parser.add_argument("--input", "-i", required=True, help="JSON spec file path")
+    parser.add_argument("--output", "-o", help="Output xlsx path")
+    parser.add_argument("--sheet", help="Worksheet name")
+    parser.add_argument("--remove-input", action="store_true", help="Delete input JSON after success")
     args = parser.parse_args()
 
     input_path = Path(args.input).resolve()
