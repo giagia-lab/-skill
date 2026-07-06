@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate finance tracking spec Excel from JSON (view + click only)."""
+"""Generate wealth app tracking spec Excel from JSON."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ BODY_ALIGN = Alignment(vertical="top", wrap_text=True)
 
 COL_WIDTHS = [10, 26, 36, 26, 36, 14, 20, 20, 28, 12, 14, 22, 24, 18, 16]
 
-CATEGORY = {"view": "浏览事件", "click": "点击事件"}
+CATEGORY = {"view": "浏览事件", "click": "点击事件", "show": "曝光事件"}
 
 
 def load_spec(path: Path) -> dict:
@@ -56,11 +56,15 @@ def get_events_config(spec: dict) -> dict:
     return {
         "view": events.get("view", {
             "name_cn": page.get("view_event_cn", f"{page.get('product_line', '')}浏览事件".strip()),
-            "name_en": page.get("view_event_en", "finance_home_view"),
+            "name_en": page.get("view_event_en", "wealth_home_view"),
         }),
         "click": events.get("click", {
             "name_cn": page.get("click_event_cn", f"{page.get('product_line', '')}点击事件".strip()),
-            "name_en": page.get("click_event_en", "finance_home_click"),
+            "name_en": page.get("click_event_en", "wealth_home_click"),
+        }),
+        "show": events.get("show", {
+            "name_cn": page.get("show_event_cn", f"{page.get('product_line', '')}曝光事件".strip()),
+            "name_en": page.get("show_event_en", "wealth_home_show"),
         }),
     }
 
@@ -100,6 +104,25 @@ def build_rows(spec: dict) -> list[list]:
             CATEGORY["click"],
             item.get("event_name_cn") or events_cfg["click"]["name_cn"],
             item.get("event_name_en") or events_cfg["click"]["name_en"],
+            page_cn,
+            page_en,
+            item.get("module_cn", ""),
+            item.get("module_en", ""),
+            item.get("element_cn", ""),
+            item.get("element_en", ""),
+            item.get("location", ""),
+            product_code,
+            remarks(page_remarks, item.get("remarks", "")),
+            item.get("explanation", ""),
+            item.get("legacy_event_id", ""),
+            item.get("change_date", default_date),
+        ])
+
+    for item in spec.get("show_events", []):
+        rows.append([
+            CATEGORY["show"],
+            item.get("event_name_cn") or events_cfg["show"]["name_cn"],
+            item.get("event_name_en") or events_cfg["show"]["name_en"],
             page_cn,
             page_en,
             item.get("module_cn", ""),
@@ -186,6 +209,7 @@ def collect_rows_from_document(document: dict) -> tuple[list[list], str]:
                 "events": page_spec.get("events", {}),
                 "view_events": page_spec.get("view_events", []),
                 "click_events": page_spec.get("click_events", []),
+                "show_events": page_spec.get("show_events", []),
             }
             all_rows.extend(build_rows(spec))
         return all_rows, sheet_name
@@ -199,22 +223,24 @@ def summarize_document(document: dict, rows: list[list]) -> str:
     if "pages" in document:
         view_n = sum(len(p.get("view_events", [])) for p in document["pages"])
         click_n = sum(len(p.get("click_events", [])) for p in document["pages"])
+        show_n = sum(len(p.get("show_events", [])) for p in document["pages"])
         return (
             f"页面数: {len(document['pages'])} | "
-            f"浏览 {view_n} | 点击 {click_n} | 合计 {len(rows)}"
+            f"浏览 {view_n} | 点击 {click_n} | 曝光 {show_n} | 合计 {len(rows)}"
         )
 
     view_n = len(document.get("view_events", []))
     click_n = len(document.get("click_events", []))
+    show_n = len(document.get("show_events", []))
     page = document.get("page", {})
     return (
         f"页面: {page.get('name_cn', '')} ({page.get('name_en', '')})\n"
-        f"浏览 {view_n} | 点击 {click_n} | 合计 {len(rows)}"
+        f"浏览 {view_n} | 点击 {click_n} | 曝光 {show_n} | 合计 {len(rows)}"
     )
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate Guojin tracking spec Excel")
+    parser = argparse.ArgumentParser(description="Generate tracking spec Excel")
     parser.add_argument("--input", "-i", required=True, help="JSON spec file path")
     parser.add_argument("--output", "-o", help="Output xlsx path")
     parser.add_argument("--sheet", help="Worksheet name")

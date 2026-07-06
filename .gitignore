@@ -4,3 +4,8 @@ __pycache__/
 *.xlsx
 *-registry.json
 /tmp/
+element_name.txt
+registry/meta.json
+registry/pages-index.json
+registry/sheets-index.json
+tracking-registry.xlsx
