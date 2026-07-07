@@ -10,9 +10,18 @@
 
 ## 安装
 
+一键安装（自动安装 skill 文件 + Python 依赖 `openpyxl`，装完重启编辑器生效）：
+
 ```bash
-./install.sh
-# 或复制到 ~/.cursor/skills/html-tracking-spec
+rm -rf /tmp/html-tracking-spec && \
+git clone --depth 1 https://github.com/giagia-lab/-skill.git /tmp/html-tracking-spec && \
+bash /tmp/html-tracking-spec/install.sh
+```
+
+默认装到 `~/.cursor/skills/html-tracking-spec`；Claude Code 等其他编辑器可先设环境变量再执行：
+
+```bash
+CURSOR_SKILLS_DIR="$HOME/.claude/skills" bash /tmp/html-tracking-spec/install.sh
 ```
 
 ## 本地知识库（可选）
