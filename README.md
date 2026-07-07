@@ -17,6 +17,17 @@
 
 ## 本地知识库（可选）
 
+把团队存量埋点 Excel 作为参数传入即可，脚本自动定位 skill 目录（不区分 AI 编辑器）：
+
+```bash
+bash ~/.cursor/skills/html-tracking-spec/build-registry.sh ~/Downloads/tracking-registry.xlsx
+```
+
+> Claude Code 用户把路径中的 `.cursor` 换成 `.claude` 即可。
+> 可选：把元素中英映射表放到 skill 根目录 `element_name.txt`。
+
+也可手动分步（等价）：
+
 ```bash
 # 1. 放置团队存量埋点 Excel 为 tracking-registry.xlsx
 # 2. 放置 element_name.txt（可选）
