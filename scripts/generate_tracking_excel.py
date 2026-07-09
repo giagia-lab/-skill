@@ -20,18 +20,18 @@ except ImportError:
 COLUMNS = [
     "埋点分类",
     "事件名称",
-    "*事件英文名称",
+    "*事件英文名称\nevent_name",
     "页面名称",
-    "*页面英文名称",
+    "*页面英文名称\npage_name",
     "模块名称",
-    "*模块英文名称",
+    "*模块英文名称\nmodule_name",
     "元素名称",
-    "*元素英文名称",
-    "*元素位置",
-    "*产品代码",
-    "*备注",
+    "*元素英文名称\nelement_name",
+    "*元素位置\nlocation",
+    "*产品代码\nproduct_code",
+    "*备注\nremarks",
     "解释说明",
-    "老埋点关联 eventId",
+    "老埋点关联\neventId",
     "新增或修改日期",
 ]
 
@@ -168,6 +168,7 @@ def write_excel(rows: list[list], output: Path, sheet_name: str = "埋点提报"
     ws.title = sheet_name[:31]
 
     ws.append(COLUMNS)
+    ws.row_dimensions[1].height = 36
     for col_idx in range(1, len(COLUMNS) + 1):
         cell = ws.cell(row=1, column=col_idx)
         cell.fill = HEADER_FILL

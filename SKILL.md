@@ -158,12 +158,12 @@ python3 scripts/generate_tracking_excel.py \
 1. **点击埋点**：紧跟「交互描述」中可埋点 bullet，插入 `<!-- TRACKING:{IX}:BEGIN/END -->` 包裹的**完整映射表**。
 2. **浏览埋点**：放在功能节标题下、`#### 业务描述` 之前。
 3. **状态类 bullet**：不插表。
-4. 表格仅含 **事件 / 页面 / 模块 / 元素 / 锚点** 五列（横向），纵向 **中文 / 英文** 两行。
+4. 表格列头为 **event_name / page_name / module_name / element_name / anchor**；数据行纵向 **中文 / 英文** 两行。
 5. **不展示**：埋点分类、元素位置、track_id（track_id 仅保留在 JSON / HTML）。
 
 ### 点击事件标准表
 
-| | 事件 | 页面 | 模块 | 元素 | 锚点 |
+| | event_name | page_name | module_name | element_name | anchor |
 | --- | --- | --- | --- | --- | --- |
 | 中文 | 组合详情页点击 | 组合产品详情页 | 产品信息 | 了解详情 | — |
 | 英文 | `wealth_portfolio_detail_click` | `wealth_portfolio_detail` | `product_info` | `learn_detail_click` | `[data-ann="learn-more"]` |

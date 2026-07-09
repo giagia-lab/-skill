@@ -3,6 +3,16 @@
 
 from __future__ import annotations
 
+PRD_COL_EVENT = "event_name"
+PRD_COL_PAGE = "page_name"
+PRD_COL_MODULE = "module_name"
+PRD_COL_ELEMENT = "element_name"
+PRD_COL_ANCHOR = "anchor"
+PRD_TABLE_HEADER = f"| | {PRD_COL_EVENT} | {PRD_COL_PAGE} | {PRD_COL_MODULE} | {PRD_COL_ELEMENT} | {PRD_COL_ANCHOR} |"
+PRD_SUMMARY_HEADER = (
+    f"| 编号 | {PRD_COL_EVENT} | {PRD_COL_PAGE} | {PRD_COL_MODULE} | {PRD_COL_ELEMENT} | {PRD_COL_ANCHOR} |"
+)
+
 
 def _cell(value: str | None, fallback: str = "—") -> str:
     text = (value or "").strip()
@@ -39,7 +49,7 @@ def _compact_table(
         f"{p}<!-- TRACKING:{ix}:BEGIN -->",
         f"{p}**埋点映射（{ix}）**",
         f"{p}",
-        f"{p}| | 事件 | 页面 | 模块 | 元素 | 锚点 |",
+        f"{p}{PRD_TABLE_HEADER}",
         f"{p}| --- | --- | --- | --- | --- | --- |",
         f"{p}| 中文 | {_cell(event_cn)} | {_cell(page_cn)} | {_cell(module_cn)} | {_cell(element_cn)} | {anchor_cn} |",
         f"{p}| 英文 | {_en_cell(event_en)} | {_en_cell(page_en)} | {_en_cell(module_en)} | {_en_cell(element_en)} | {anchor_en} |",
@@ -92,7 +102,7 @@ def build_summary_table(spec: dict) -> str:
     lines = [
         "## 附录：埋点映射总表（自动生成）",
         "",
-        "| 编号 | 事件 | 页面 | 模块 | 元素 | 锚点 |",
+        PRD_SUMMARY_HEADER,
         "| --- | --- | --- | --- | --- | --- |",
     ]
     for page_spec in spec.get("pages", []):
