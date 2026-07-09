@@ -1,10 +1,10 @@
 # html-tracking-spec
 
-从 HTML 页面原型生成理财 App 埋点提报 Excel（浏览 / 点击 / 曝光）的 Cursor Agent Skill。
+从 HTML 页面原型 + PRD 生成理财 App 埋点交付物（确认单 → Excel → PRD 内联表 + HTML 锚点）的 Cursor Agent Skill。
 
 ## 功能
 
-- 页面级《埋点确认单》→ 用户确认后自动生成 Excel
+- 三阶段门禁：页面级《埋点确认单》→ Excel + `tracking-spec.json` → PRD 内联埋点表 + HTML `data-track-*`
 - 支持多页面 HTML、曝光事件、本地存量知识库检索
 - 敏感数据（存量 Excel、element 映射表、registry 索引）**仅本地维护，不入库**
 
@@ -51,6 +51,13 @@ python3 scripts/generate_tracking_excel.py \
   -o ./output-埋点.xlsx \
   --remove-input
 ```
+
+## 阶段 3 脚本（PRD + HTML）
+
+项目内 build 脚本可 import：
+
+- `scripts/prd_tracking_table.py` — PRD 内联横向五列表
+- `scripts/inject_html_tracking.py` — HTML `data-track-*` 注入
 
 ## 文档
 

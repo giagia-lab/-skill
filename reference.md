@@ -48,3 +48,54 @@ python3 scripts/lookup_element_names.py --suggest "按钮文案"
 
 - 前导页面、解释说明（除非用户要求）
 - 曝光事件（除非确认单已确认）
+
+---
+
+## PRD 内联埋点表格
+
+横向 5 列：**事件 · 页面 · 模块 · 元素 · 锚点**；纵向 2 行：**中文 / 英文**。
+
+不展示：埋点分类、元素位置、track_id、埋点编号表内重复字段（编号仅保留在标题 `埋点映射（F02-IX01）`）。
+
+### 点击事件
+
+```markdown
+- 用户点击「了解详情」后，当前页面蒙层展示弹窗。
+  <!-- TRACKING:F02-IX01:BEGIN -->
+  **埋点映射（F02-IX01）**
+
+  | | 事件 | 页面 | 模块 | 元素 | 锚点 |
+  | --- | --- | --- | --- | --- | --- |
+  | 中文 | 组合详情页点击 | 组合产品详情页 | 产品信息 | 了解详情 | — |
+  | 英文 | `wealth_portfolio_detail_click` | `wealth_portfolio_detail` | `product_info` | `learn_detail_click` | `[data-ann="learn-more"]` |
+
+  <!-- TRACKING:F02-IX01:END -->
+```
+
+- **锚点**：写在英文行；中文行填 `—`。
+- **浏览事件**：模块、元素中文/英文均填 `—`；放在功能节标题下、`#### 业务描述` 之前。
+
+### 字段来源（tracking-spec.json）
+
+| 列 | 中文行 | 英文行 |
+|----|--------|--------|
+| 事件 | `events.*.name_cn` | `events.*.name_en` |
+| 页面 | `page.name_cn` | `page.name_en` |
+| 模块 | `click_events[].module_cn` | `click_events[].module_en` |
+| 元素 | `click_events[].element_cn` | `click_events[].element_en` |
+| 锚点 | — | `anchor.selector` |
+
+### 附录总表
+
+单行 per IX，单元格内 `中文 / \`英文\``；锚点仅一列。由 `scripts/prd_tracking_table.py` 的 `build_summary_table()` 生成。
+
+### HTML 锚点属性
+
+| 属性 | 说明 |
+|------|------|
+| `data-track-id` | track_id（不进 PRD 表） |
+| `data-track-type` | `view` / `click` |
+| `data-track-event` | event_name_en |
+| `data-track-ix` | 与 PRD interaction_id 一致 |
+
+由 `scripts/inject_html_tracking.py` 根据 `anchor.selector` 注入。

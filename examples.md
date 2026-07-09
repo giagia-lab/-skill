@@ -2,7 +2,7 @@
 
 源文件：`demo/portfolio-position-detail.html`（示例路径）
 
-## 埋点确认单（Step 0 示例）
+## 埋点确认单（阶段 1 示例）
 
 **业务线 / sheet**：组合产品
 
@@ -10,9 +10,41 @@
 |---|-----------------|-----------|----------|----------|------------|----------|-------------|----------|------------|
 | 1 | 组合持仓详情 | `wealth_portfolio_position_detail` | 新增 | 组合持仓浏览事件 | `wealth_portfolio_position_view` | 组合持仓点击事件 | `wealth_portfolio_position_click` | — | — |
 
-> 用户回复「确认」后，Agent 再从 HTML 推导 module/element 并生成 Excel。
+> 用户回复「确认」后，Agent 再从 HTML 推导 module/element，生成 Excel 与 `tracking-spec.json`。
 
-## spec 结构（内存组装，不交付 JSON）
+## tracking-spec.json（阶段 2 机器契约，节选）
+
+```json
+{
+  "pages": [{
+    "page": {
+      "name_cn": "组合持仓详情",
+      "name_en": "wealth_portfolio_position_detail",
+      "source_html": "portfolio-position-detail.html"
+    },
+    "events": {
+      "view": { "name_cn": "组合持仓浏览事件", "name_en": "wealth_portfolio_position_view" },
+      "click": { "name_cn": "组合持仓点击事件", "name_en": "wealth_portfolio_position_click" }
+    },
+    "view_events": [{
+      "interaction_id": "F01-IX01",
+      "track_id": "T001",
+      "anchor": { "selector": "section.screen" }
+    }],
+    "click_events": [{
+      "interaction_id": "F01-IX02",
+      "track_id": "T002",
+      "module_cn": "页面上方",
+      "module_en": "page_top",
+      "element_cn": "返回上一页",
+      "element_en": "back_to",
+      "anchor": { "selector": "[data-ann=\"back\"]" }
+    }]
+  }]
+}
+```
+
+## Excel spec（generate_tracking_excel 输入，节选）
 
 ```json
 {
@@ -35,4 +67,5 @@
 
 ## 预期产出
 
-浏览 1 · 点击 N → `demo/portfolio-position-detail-埋点.xlsx`
+- 阶段 2：浏览 1 · 点击 N → `demo/portfolio-position-detail-埋点.xlsx` + `tracking-spec.json`
+- 阶段 3：PRD 内联表 + 带 `data-track-*` 的原型 HTML
