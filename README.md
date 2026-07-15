@@ -4,7 +4,9 @@
 
 ## 功能
 
-- 三阶段门禁：页面级《埋点确认单》→ Excel + `tracking-spec.json` → PRD 内联埋点表 + HTML `data-track-*`
+- 三阶段门禁：页面级《埋点确认单》（**事件名称前置**）→ Excel + `tracking-spec.json` → PRD 内联埋点表 + HTML `data-track-*`
+- `event_name` 默认来自示例事件名称字典（可替换）；中文事件名须含动作词
+- PRD 内联表强制顶格，避免 Markdown Preview 表格消失
 - 支持多页面 HTML、曝光事件、本地存量知识库检索
 - 敏感数据（存量 Excel、element 映射表、registry 索引）**仅本地维护，不入库**
 
@@ -59,11 +61,21 @@ python3 scripts/generate_tracking_excel.py \
 - `scripts/prd_tracking_table.py` — PRD 内联横向五列表
 - `scripts/inject_html_tracking.py` — HTML `data-track-*` 注入
 
+## 事件名称字典（可选替换）
+
+```bash
+python3 scripts/lookup_event_names.py --suggest "基金详情"
+python3 scripts/lookup_event_names.py --list-dict
+```
+
+团队可替换 [references/event-name-dictionary.md](references/event-name-dictionary.md) 与 `scripts/lookup_event_names.py` 中的字典表。
+
 ## 文档
 
 - [SKILL.md](SKILL.md) — Agent 工作流
 - [reference.md](reference.md) — 命名约定
 - [examples.md](examples.md) — 示例
+- [references/event-name-dictionary.md](references/event-name-dictionary.md) — 事件名称字典（示例）
 
 ## License
 

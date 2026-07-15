@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Generate wealth app tracking spec Excel from JSON."""
+"""Generate wealth-app tracking spec Excel from JSON."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -44,6 +45,52 @@ COL_WIDTHS = [10, 26, 36, 26, 36, 14, 20, 20, 28, 12, 14, 22, 24, 18, 16]
 
 CATEGORY = {"view": "浏览事件", "click": "点击事件", "show": "曝光事件"}
 
+_SCRIPTS = Path(__file__).resolve().parent
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
+from event_name_cn import check_spec, normalize_event_cn, normalize_events_dict  # noqa: E402
+
+try:
+    from lookup_event_names import is_company_prefix  # noqa: E402
+except ImportError:  # pragma: no cover
+    is_company_prefix = None  # type: ignore
+
+
+def warn_unknown_event_prefixes(document: dict) -> None:
+    """Warn if event_name_en prefix is outside company event-name dictionary."""
+    if is_company_prefix is None:
+        return
+
+    def check_en(name_en: str, label: str) -> None:
+        if not name_en:
+            return
+        en = name_en.split("\n")[0].strip()
+        m = re.match(r"(.+)_(view|click|show)$", en, re.I)
+        if not m:
+            print(f"[event_prefix WARN] {label}: 无法解析前缀 `{en}`", file=sys.stderr)
+            return
+        prefix = m.group(1)
+        if not is_company_prefix(prefix):
+            print(
+                f"[event_prefix WARN] {label}: `{en}` 前缀 `{prefix}` 不在公司事件名称字典。"
+                f" 确认单默认须用事件名称字典中的前缀（如 wealth_home / wealth_fund）；"
+                f" 仅当用户明示「用户指定（非字典）」时可忽略。",
+                file=sys.stderr,
+            )
+
+    pages = document.get("pages") or [document]
+    for page_spec in pages:
+        if "page" not in page_spec and "events" not in page_spec:
+            continue
+        page = page_spec.get("page") or {}
+        label = page.get("name_en") or page.get("name_cn") or "?"
+        for et, cfg in (page_spec.get("events") or {}).items():
+            if isinstance(cfg, dict):
+                check_en(cfg.get("name_en", ""), f"{label}/{et}")
+        for key in ("view_events", "click_events", "show_events"):
+            for item in page_spec.get(key) or []:
+                check_en(item.get("event_name_en", ""), f"{label}/{item.get('interaction_id', key)}")
+
 
 def load_spec(path: Path) -> dict:
     with path.open(encoding="utf-8") as f:
@@ -53,19 +100,31 @@ def load_spec(path: Path) -> dict:
 def get_events_config(spec: dict) -> dict:
     page = spec["page"]
     events = spec.get("events", {})
+    view_cn = events.get("view", {}).get("name_cn") or page.get(
+        "view_event_cn", f"{page.get('product_line', '')}浏览事件".strip()
+    )
+    click_cn = events.get("click", {}).get("name_cn") or page.get(
+        "click_event_cn", f"{page.get('product_line', '')}点击事件".strip()
+    )
+    show_cn = events.get("show", {}).get("name_cn") or page.get(
+        "show_event_cn", f"{page.get('product_line', '')}曝光事件".strip()
+    )
     return {
-        "view": events.get("view", {
-            "name_cn": page.get("view_event_cn", f"{page.get('product_line', '')}浏览事件".strip()),
-            "name_en": page.get("view_event_en", "wealth_home_view"),
-        }),
-        "click": events.get("click", {
-            "name_cn": page.get("click_event_cn", f"{page.get('product_line', '')}点击事件".strip()),
-            "name_en": page.get("click_event_en", "wealth_home_click"),
-        }),
-        "show": events.get("show", {
-            "name_cn": page.get("show_event_cn", f"{page.get('product_line', '')}曝光事件".strip()),
-            "name_en": page.get("show_event_en", "wealth_home_show"),
-        }),
+        "view": {
+            "name_cn": normalize_event_cn(view_cn, "view"),
+            "name_en": events.get("view", {}).get("name_en")
+            or page.get("view_event_en", "wealth_home_view"),
+        },
+        "click": {
+            "name_cn": normalize_event_cn(click_cn, "click"),
+            "name_en": events.get("click", {}).get("name_en")
+            or page.get("click_event_en", "wealth_home_click"),
+        },
+        "show": {
+            "name_cn": normalize_event_cn(show_cn, "show"),
+            "name_en": events.get("show", {}).get("name_en")
+            or page.get("show_event_en", "wealth_home_show"),
+        },
     }
 
 
@@ -241,7 +300,7 @@ def summarize_document(document: dict, rows: list[list]) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate tracking spec Excel")
+    parser = argparse.ArgumentParser(description="Generate wealth-app tracking spec Excel")
     parser.add_argument("--input", "-i", required=True, help="JSON spec file path")
     parser.add_argument("--output", "-o", help="Output xlsx path")
     parser.add_argument("--sheet", help="Worksheet name")
@@ -256,6 +315,28 @@ def main() -> None:
     output_path = Path(args.output).resolve() if args.output else input_path.with_suffix(".xlsx")
 
     document = load_spec(input_path)
+
+    # 硬约束：事件中文名须含 浏览/点击/曝光（存量缺动作时自动补齐）
+    if "pages" in document:
+        for p in document["pages"]:
+            ev, changes = normalize_events_dict(p.get("events") or {})
+            p["events"] = ev
+            for c in changes:
+                print(f"[event_name_cn] {c}", file=sys.stderr)
+    elif "events" in document:
+        ev, changes = normalize_events_dict(document.get("events") or {})
+        document["events"] = ev
+        for c in changes:
+            print(f"[event_name_cn] {c}", file=sys.stderr)
+
+    errs = check_spec(document)
+    if errs:
+        for e in errs:
+            print(e, file=sys.stderr)
+        sys.exit(1)
+
+    warn_unknown_event_prefixes(document)
+
     rows, default_sheet = collect_rows_from_document(document)
     if not rows:
         print("No tracking events found in spec.", file=sys.stderr)

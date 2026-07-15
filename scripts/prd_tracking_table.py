@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-"""Format compact horizontal tracking tables for PRD inline embedding."""
+"""Format compact horizontal tracking tables for PRD inline embedding.
+
+硬约束：输出行一律顶格（无前导空格）。列表内缩进表格会导致
+VS Code / Cursor Markdown Preview（GFM）不渲染——源码可见、预览消失。
+"""
 
 from __future__ import annotations
 
+# PRD 内联表列头（英文 field key）
 PRD_COL_EVENT = "event_name"
 PRD_COL_PAGE = "page_name"
 PRD_COL_MODULE = "module_name"
@@ -40,21 +45,26 @@ def _compact_table(
     element_cn: str,
     element_en: str,
     anchor: str,
-    indent: str = "  ",
+    indent: str = "",
 ) -> list[str]:
+    """Emit PRD tracking table flush-left (indent ignored for GFM compatibility)."""
+    _ = indent
     anchor_cn = "—"
     anchor_en = f"`{anchor}`" if anchor else "—"
-    p = indent
-    return [
-        f"{p}<!-- TRACKING:{ix}:BEGIN -->",
-        f"{p}**埋点映射（{ix}）**",
-        f"{p}",
-        f"{p}{PRD_TABLE_HEADER}",
-        f"{p}| --- | --- | --- | --- | --- | --- |",
-        f"{p}| 中文 | {_cell(event_cn)} | {_cell(page_cn)} | {_cell(module_cn)} | {_cell(element_cn)} | {anchor_cn} |",
-        f"{p}| 英文 | {_en_cell(event_en)} | {_en_cell(page_en)} | {_en_cell(module_en)} | {_en_cell(element_en)} | {anchor_en} |",
-        f"{p}<!-- TRACKING:{ix}:END -->",
+    lines = [
+        f"<!-- TRACKING:{ix}:BEGIN -->",
+        f"**埋点映射（{ix}）**",
+        "",
+        PRD_TABLE_HEADER,
+        "| --- | --- | --- | --- | --- | --- |",
+        f"| 中文 | {_cell(event_cn)} | {_cell(page_cn)} | {_cell(module_cn)} | {_cell(element_cn)} | {anchor_cn} |",
+        f"| 英文 | {_en_cell(event_en)} | {_en_cell(page_en)} | {_en_cell(module_en)} | {_en_cell(element_en)} | {anchor_en} |",
+        f"<!-- TRACKING:{ix}:END -->",
     ]
+    for ln in lines:
+        if ln.startswith((" ", "\t")):
+            raise ValueError(f"tracking table line must be flush-left, got: {ln!r}")
+    return lines
 
 
 def format_click_table(item: dict, page_spec: dict, event_cfg: dict) -> list[str]:
