@@ -25,9 +25,9 @@ description: >-
 |------|--------|------|
 | 1 | 《埋点确认单》 | 不出 Excel / 不改 PRD / 不改 HTML；不含模块/元素清单 |
 | 2 | `tracking-spec.json` + Excel | 不出 PRD / 不改 HTML；**不得改写已确认 event 前缀** |
-| 3 | 新 PRD + 原型 HTML | 仅在 Excel 确认后执行 |
+| 3 | 新 PRD + `01_原型/*.html` | 仅在 Excel 确认后执行 |
 
-> 事件命名管控严格，但**不另开独立确认门禁**：与页面字段同单确认；确认单内**事件名称优先**，歧义页用 AskQuestion。  
+> 事件命名管控严格，但**不另开独立确认门禁**：与页面字段同单确认；确认单内**事件名称小节**，歧义页用 AskQuestion。  
 > 模块/元素不在确认单中列出——整单「确认」后由 Agent 自动推导。
 
 ---
@@ -40,25 +40,25 @@ Task Progress:
 - [ ] 1. 歧义处 AskQuestion；多轮完善后用户「确认」
 - [ ] 2. 划分 module、逐元素命名 → tracking-spec.json + Excel
 - [ ] 3. 用户「Excel 确认」→ PRD 内联表 + HTML data-track-*
-- [ ] 4. 自检
+- [ ] 4. Agent 自动自检（含 PRD 表头英文 field key 校验）→ 通过后再汇报交付；失败则修复重写，**勿让用户手动跑脚本**
 ```
 
 ---
 
 ## 知识库（运行时检索，勿整表塞进对话）
 
-| 资源 | 用途 | 说明 |
-|------|------|------|
-| [references/event-name-dictionary.md](references/event-name-dictionary.md) | **`event_name` 默认标准来源**（示例字典，可替换） | 开确认单前必读 |
-| [registry/](registry/) | 存量 **page** / sheet / module·element（**非** event 提案源） | 由本地 `tracking-registry.xlsx` 构建，不入库 |
-| `element_name.txt` | 元素英文 ↔ 中文 | 团队本地维护，不入库 |
+| 资源 | 用途 | 检索命令 |
+|------|------|----------|
+| [references/event-name-dictionary.md](references/event-name-dictionary.md) | **`event_name` 唯一标准来源**（事件字典） | 开确认单前必读 |
+| [registry/](registry/) | 存量 **page** / sheet / module·element（**非** event 提案源） | `lookup_registry.py` |
+| [element_name.txt](element_name.txt) | 元素英文 ↔ 中文 | `lookup_element_names.py` |
 | [scripts/event_name_cn.py](scripts/event_name_cn.py) | 事件中文动作词校验 / 补齐 | `--check` / `--normalize` |
-| [scripts/lookup_event_names.py](scripts/lookup_event_names.py) | **按字典**建议前缀 | `--suggest` / `--list-dict` |
+| [scripts/lookup_event_names.py](scripts/lookup_event_names.py) | **按事件字典**建议前缀 | `--suggest` / `--list-dict` |
 
 ```bash
-python3 scripts/lookup_event_names.py --suggest "基金详情"
+python3 scripts/lookup_event_names.py --suggest "公募基金详情"
 python3 scripts/lookup_event_names.py --list-dict
-python3 scripts/lookup_registry.py --page "组合详情"
+python3 scripts/lookup_registry.py --page "净值型公募"
 python3 scripts/lookup_element_names.py --suggest "返回上一页"
 ```
 
@@ -70,17 +70,17 @@ python3 scripts/lookup_element_names.py --suggest "返回上一页"
 
 ### 事件名称在确认单中的位置（写死）
 
-**与页面字段同单确认，不另开「事件名称确认」门禁。** 确认单必须：
+**与页面字段同单确认，不另开「事件名称确认」门禁。** 但因命名管控严格，确认单必须：
 
-1. **开头先放**「事件名称（重点核对）」专节  
+1. **开头先放**「事件名称（重点核对）」专节（或页面表中事件列视觉优先）  
 2. 每行标明 **事件归属** + 浏览/点击/曝光中英文  
 3. 有歧义（如 `wealth_home` vs `wealth_fund`）→ **AskQuestion**，不得暗含选定  
 4. 用户一次回复 **「确认」** 同时锁定页面与事件名；阶段 2 **不得改写**已确认 event 前缀  
 
-### event_name 归属硬约束（写死 · 字典默认来源）
+### event_name 归属硬约束（写死 · 字典唯一来源）
 
-**`event_name`（英）默认来源**：[references/event-name-dictionary.md](references/event-name-dictionary.md)。  
-理财线示例默认只有：
+**`event_name`（英）唯一标准来源**：[references/event-name-dictionary.md](references/event-name-dictionary.md)（事件名称字典）。  
+理财线默认只有：
 
 | 业务 | 前缀 | 三件套 |
 |------|------|--------|
@@ -88,7 +88,7 @@ python3 scripts/lookup_element_names.py --suggest "返回上一页"
 | 理财基金 | `wealth_fund` | `wealth_fund_view` / `_click` / `_show` |
 
 同一前缀可服务多页面——靠 `page_name` / `module_name` / `element_name` 区分。  
-`page_name` 可以新；**禁止**为每个新页面拆一套字典外默认 event 前缀。
+`page_name` 可以新；**禁止**为页面造 `wealth_product_detail_*`、`wealth_buy_*`、`Wealth_FAQ_*` 等字典外默认名。
 
 **提案规则：**
 
@@ -97,12 +97,12 @@ python3 scripts/lookup_element_names.py --suggest "返回上一页"
 | 1 | 读字典 + `lookup_event_names.py --suggest`（**仅返回字典前缀**） |
 | 2 | 公募/基金详情、购买、基金 H5 → 默认 `wealth_fund_*`；商城首页/专区 → `wealth_home_*` |
 | 3 | `wealth_home` vs `wealth_fund` 不清 → AskQuestion |
-| 4 | registry 细粒度历史名**可在备注中提示**，但确认单默认栏仍填**字典**名；仅用户明示「用户指定（非字典）」才改写 |
+| 4 | registry 细粒度历史名**可在备注中提示「历史常用 xxx」**，但确认单默认栏仍填**字典**名；仅用户明示「用户指定（非字典）」才改写 |
 
 **禁止（Agent 默认行为）：**
 
 - ❌ 用 registry 页级/sheet 级 `events.*` 当作确认单默认 `event_name`
-- ❌ 自造或沿用字典外细名作默认
+- ❌ 自造或沿用字典外细名作默认（`wealth_product_detail`、`wealth_buy`、`Wealth_FAQ`、`wealth_ac_share_faq` 等）
 - ❌ 为每个新页面拆一套新 event 前缀
 
 ### 事件中文名硬约束（写死）
@@ -114,9 +114,11 @@ python3 scripts/lookup_element_names.py --suggest "返回上一页"
 | `wealth_fund` | 理财基金浏览 | 理财基金点击 | 理财基金曝光 |
 | `wealth_home` | 理财浏览 | 理财点击 | 理财曝光 |
 
+（用户可在确认单改中文措辞，但须保留动作词；英文前缀仍以字典为准。）
+
 ```bash
 python3 scripts/event_name_cn.py --check tracking-spec.json
-python3 scripts/event_name_cn.py --normalize tracking-spec.json --write-in-place
+python3 scripts/event_name_cn.py --normalize tracking-spec.json --fix-in-place
 ```
 
 ### 确认单必含字段
@@ -127,8 +129,8 @@ python3 scripts/event_name_cn.py --normalize tracking-spec.json --write-in-place
 | 每页面 | **页面名称（中文）** | |
 | 每页面 | **页面名称（英文）** `page_name` | registry 命中则复用，否则建议（页面可新增） |
 | 每页面 | **是否新增** | 指**页面**：`新增` / `存量` |
-| 每页面 | **事件归属** | 字典档或 `用户指定新增`（**重点**） |
-| 每页面 | **浏览/点击/曝光事件**（中 + 英） | 中文须含动作词（**重点**） |
+| 每页面 | **事件归属** | 档 1–4 之一，或 `用户指定新增`（**重点**） |
+| 每页面 | **浏览/点击/曝光事件**（中 + 英） | 英默认已有三件套；中文须含动作词（**重点**） |
 
 ### 确认单模板
 
@@ -172,7 +174,7 @@ python3 scripts/event_name_cn.py --normalize tracking-spec.json --write-in-place
 | 对象 | 判定 |
 |------|------|
 | **页面** | `--page` 命中 → 存量页；未命中 → 新增页（仍可复用已有 event） |
-| **事件** | **仅字典前缀**；**新增页 ≠ 新事件名**（多页可共用 `wealth_fund_*`） |
+| **事件** | **仅事件字典前缀**；**新增页 ≠ 新事件名**（多页可共用 `wealth_fund_*`） |
 
 ### 曝光事件
 
@@ -236,6 +238,26 @@ python3 scripts/generate_tracking_excel.py \
 
 读取已确认的 `tracking-spec.json`，生成新 PRD 与新 HTML（**勿改原稿**，输出到交付目录）。
 
+### Agent 必做流水线（写死 · 使用者无需跑任何命令）
+
+阶段 3 由 **Agent 在本回合内自动完成**下列步骤；**禁止**把校验命令甩给用户执行：
+
+1. **生成表**：只通过 `import scripts.prd_tracking_table` 的 `format_click_block` / `format_view_block` / `build_summary_table` 产出埋点表（或项目 `build_phase3_deliver.py` 调同一模块）。**禁止手写** Markdown 表。
+2. **写入**新 PRD + 注入 HTML `data-track-*`。
+3. **自动自检（门禁）**：写完 PRD 后，Agent **必须立刻**用 Shell 执行（路径换成实际交付文件）：
+
+```bash
+python3 scripts/prd_tracking_table.py \
+  --check "<交付目录>/xxx_PRD_V1.0_埋点版.md"
+```
+
+或在 build 脚本内调用 `validate_prd_tracking_tables(prd_text)`（与 CLI 等价）。
+
+4. **`--check` 失败** → Agent 自行修表后重跑，直到 OK；**不得**向用户交代「请你本地跑一遍 --check」。
+5. **`--check` 通过** → 再向用户汇报阶段 3 交付路径。
+
+> 使用者侧零操作：回复「Excel 确认」后，只收交付物；表头/顶格校验是 Agent 职责。
+
 ### PRD 内联表规则
 
 **一一对应（硬约束）**
@@ -245,38 +267,69 @@ python3 scripts/generate_tracking_excel.py \
 | **点击** | 「交互描述」下**每一条可埋点 bullet** 之后 | `一句功能描述` → 紧跟一张 `埋点映射（Fxx-IXxx）` 表 | 多句共用一张、堆到文末、挂在状态结果句下 |
 | **浏览** | **仅对逻辑页面有效**：功能节标题下、`#### 业务描述` **之前**（每逻辑页至多 1 条 view） | 模块/元素填 `—` | 挂在某条点击交互下、或按按钮拆浏览 |
 
+**表头写死（硬约束 · 唯一合法格式）**
+
+> 阶段 3 **禁止手写**埋点表。必须经 `prd_tracking_table.py` 生成，并由 Agent 自动 `--check`（见上方流水线）。
+
+| 规则 | 说明 |
+|------|------|
+| **唯一合法表头** | `\| \| event_name \| page_name \| module_name \| element_name \| anchor \|` |
+| **禁止中文列头** | ❌ `事件名称` / `页面名称` / `模块名称` / `元素名称` / `锚点`（这些是 Excel 中文列，**不是** PRD 内联表头） |
+| **数据行** | 固定两行：`中文` / `英文`；英文行 field value 与 anchor 用反引号 |
+| **中文行锚点** | 固定填 `—`；selector 只写在英文行 |
+| **实现** | 表头常量 `PRD_TABLE_HEADER` 写死在 `prd_tracking_table.py`；Agent 交付前自动 `--check`，使用者不跑命令 |
+
 **表格顶格（硬约束 · 写死）**
 
 | 规则 | 说明 |
 |------|------|
 | 强制 | `<!-- TRACKING:… -->`、`**埋点映射**`、表头行、分隔行、数据行 **全部行首无空格/Tab** |
-| 禁止 | 为「看起来缩在列表下」给表格加缩进；禁止用手写缩进覆盖 `prd_tracking_table.py` |
+| 禁止 | 为「看起来缩在列表下」给表格加 `  ` / `    ` 缩进；禁止用手写缩进覆盖 `prd_tracking_table.py` |
 | 原因 | GFM / VS Code / Cursor Markdown Preview：列表内缩进表格常解析失败 → **源码看得见、Preview 表消失** |
-| 实现 | 一律调用 `scripts/prd_tracking_table.py`（内部强制顶格）；build 脚本**禁止**再包一层缩进 |
 
-正例（表顶格，紧跟 bullet）：
+### 标准表（写死 · 照抄骨架，只替换花括号内容）
 
 ```markdown
-- 用户点击“了解详情”后,当前页面蒙层展示弹窗。
-<!-- TRACKING:F02-IX01:BEGIN -->
-**埋点映射（F02-IX01）**
+- 点击左上角返回，返回进入 H5 前的页面上下文。
+<!-- TRACKING:F06-IX01:BEGIN -->
+**埋点映射（F06-IX01）**
 
 | | event_name | page_name | module_name | element_name | anchor |
 | --- | --- | --- | --- | --- | --- |
-| 中文 | 理财基金点击 | 净值型公募基金详情页 | 交易规则 | 了解详情 | — |
-| 英文 | `wealth_fund_click` | `wealth_fund_product_detail` | `fund_information` | `learn_detail_click` | `[data-ann="detail-learn-more"]` |
-<!-- TRACKING:F02-IX01:END -->
+| 中文 | 理财基金点击 | A/C 常见问题 H5 | 页面上方 | 返回上一页 | — |
+| 英文 | `wealth_fund_click` | `wealth_ac_share_faq` | `page_top` | `back_to` | `[data-ann="faq-back"]` |
+<!-- TRACKING:F06-IX01:END -->
+```
+
+反例（禁止 · 中文列头）：
+
+```markdown
+<!-- 禁止：把 Excel 中文列名当成 PRD 表头 -->
+| | 事件名称 | 页面名称 | 模块名称 | 元素名称 | 锚点 |
+```
+
+反例（禁止 · 缩进）：
+
+```markdown
+- 用户点击“了解详情”后,当前页面蒙层展示弹窗。
+  <!-- TRACKING:F02-IX01:BEGIN -->
+  **埋点映射（F02-IX01）**
+  | | event_name | …
 ```
 
 细则：
 
-1. **点击埋点**：紧跟可埋点交互 bullet；**表必须顶格**。
-2. **浏览埋点**：放在功能节标题与 `#### 业务描述` 之间（同样顶格）。
-3. **状态类 bullet**：**不插表**。
-4. 原稿缺可埋点交互句、但 Excel/spec 已有对应点击时：先补一句交互描述，再挂表。
-5. 表格列头为 **event_name / page_name / module_name / element_name / anchor**；数据行纵向 **中文 / 英文**。
+1. **点击埋点**：紧跟可埋点交互 bullet，插入 `<!-- TRACKING:{IX}:BEGIN/END -->` 包裹的完整映射表（一句一表）；**表必须顶格**。
+2. **浏览埋点**：只表示「进入该页」，与具体按钮无关；放在功能节标题与 `#### 业务描述` 之间（同样顶格）。
+3. **状态类 bullet**（如「关闭后回到原位置」「跳转后定位顶部」）：**不插表**。
+4. 原稿缺可埋点交互句、但 Excel/spec 已有对应点击时：先补一句交互描述，再挂表（保证一一对应）。
+5. 表格列头**只能**是英文 field key（见上「表头写死」）；数据行纵向 **中文 / 英文**。
 6. **不展示**：埋点分类、元素位置、track_id（仅保留在 JSON / HTML）。
-7. 文末 `## 附录：埋点映射总表` 仅作索引，**不能代替**正文内联一一对应。
+7. 文末 `## 附录：埋点映射总表` 仅作索引，**不能代替**第六节内联一一对应；附录表头同样用英文 field key。
+
+浏览事件：模块、元素两行均填 `—`；锚点写在英文行。
+
+阶段 3 自动追加 `## 附录：埋点映射总表`（全部 IX 一览）。详见 [reference.md](reference.md#prd-内联埋点表格)。
 
 ### HTML 锚点
 
@@ -289,14 +342,15 @@ python3 scripts/generate_tracking_excel.py \
 
 可选注入 debug stub（控制台 `[track]` 日志）。
 
-### 脚本
+### 脚本（Agent 内部调用 · 非用户操作）
 
 ```bash
-python3 scripts/prd_tracking_table.py
-python3 scripts/inject_html_tracking.py
+# Agent 写完埋点版 PRD 后立刻自检（使用者不必执行）
+python3 scripts/prd_tracking_table.py \
+  --check "<交付目录>/xxx_PRD_V1.0_埋点版.md"
 ```
 
-项目内阶段 3 应 import 本 skill 的 `scripts/`，**禁止**手写简化版埋点行。
+项目 `build_phase3_deliver.py` **必须** `import` 本 skill 的 `prd_tracking_table` / `inject_html_tracking`，在写出 PRD 后调用 `validate_prd_tracking_tables`（与 `--check` 等价），失败则中止交付。**禁止**手写埋点表；**禁止**让用户手动跑校验。
 
 ---
 
@@ -305,25 +359,27 @@ python3 scripts/inject_html_tracking.py
 **阶段 1**
 - [ ] 确认单含「事件名称（重点核对）」专节；与页面字段同单
 - [ ] **每个 view/click/show 英前缀均在事件名称字典内**（或用户明示「用户指定（非字典）」）
-- [ ] 默认提案**无** registry 细名
+- [ ] 默认提案**无** registry 细名（`wealth_product_detail` / `wealth_buy` / `Wealth_FAQ` 等）
 - [ ] `wealth_home` vs `wealth_fund` 歧义已 AskQuestion
 - [ ] 中文事件名含动作词；确认单无模块/元素清单
 - [ ] 用户已回复「确认」
 
 **阶段 2**
-- [ ] 确认单中的业务线、各页 page_name、事件名、是否新增与 Excel 一致
+- [ ] 埋点确认单中的业务线、各页 page_name、事件名、是否新增与 Excel 一致
 - [ ] **事件中文名均含动作词**；`event_name_cn.py --check` 通过
-- [ ] **事件英文前缀均在字典内**（或确认单已标「用户指定（非字典）」）
+- [ ] **事件英文前缀均在事件字典内**（或确认单已标「用户指定（非字典）」）
 - [ ] 存量页 module/element 已参考 registry；元素已查 element_name.txt
 - [ ] 曝光行仅含用户确认项
-- [ ] Excel 15 列、橙色表头、英文 field 副标题、event 列合并
+- [ ] Excel 15 列、橙色表头、英文 field 副标题（`event_name` 等）、event 列合并
 - [ ] `tracking-spec.json` 与 Excel 条数、字段一致
 
 **阶段 3**
 - [ ] 点击：一句可埋点交互描述 + 一张埋点表（一一对应）；状态句无表
-- [ ] **所有 TRACKING 表相关行顶格**（行首无空格）
-- [ ] 浏览：仅挂在页面级；每逻辑页至多 1 条 view
-- [ ] PRD 内联表列头完整；锚点值在英文行
+- [ ] **所有 TRACKING 表相关行顶格**（行首无空格）；无「列表内缩进表格」
+- [ ] 浏览：仅挂在页面级（节标题下 / 业务描述前），不挂在点击句下；每逻辑页至多 1 条 view
+- [ ] **表头写死为英文 field key**：`event_name` / `page_name` / `module_name` / `element_name` / `anchor`（无中文列头）
+- [ ] **Agent 已自动** `--check` / `validate_prd_tracking_tables` 且通过（未要求用户跑命令）
+- [ ] 表由 `prd_tracking_table.py` 生成，非手写
 - [ ] `<!-- TRACKING:{IX}:BEGIN/END -->` 可 idempotent 重生成
 - [ ] HTML `data-track-*` selector 可命中对应元素
 - [ ] `data-track-ix` 与 PRD 编号一致

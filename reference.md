@@ -1,6 +1,6 @@
 # 理财 App 埋点规范参考（轻量）
 
-> 详细存量数据由团队本地 `tracking-registry.xlsx` 构建至 `registry/`，运行时通过脚本检索，**勿将整表写入对话**。
+> 详细存量数据见 `registry/`（由 `tracking-registry.xlsx` 构建），运行时通过脚本检索，**勿将整表写入对话**。
 
 ## 知识库检索
 
@@ -9,13 +9,13 @@ python3 scripts/lookup_registry.py --page "页面中文或英文"
 python3 scripts/lookup_registry.py --sheet "业务线"
 python3 scripts/lookup_registry.py --list-exposure-sheets
 python3 scripts/lookup_event_names.py --suggest "基金详情"
-python3 scripts/lookup_event_names.py --list-dict
+python3 scripts/lookup_event_names.py --prefix wealth_product_detail
 python3 scripts/lookup_element_names.py --suggest "按钮文案"
 ```
 
-重建索引：将存量 Excel 存为 `tracking-registry.xlsx` 后执行 `python3 scripts/build_registry.py`
+重建索引：`python3 scripts/build_registry.py`
 
-事件名归属示例字典：[references/event-name-dictionary.md](references/event-name-dictionary.md)
+公司级 / 理财线事件名归属：[references/event-name-dictionary.md](references/event-name-dictionary.md)
 
 ## 事件类型
 
@@ -27,11 +27,12 @@ python3 scripts/lookup_element_names.py --suggest "按钮文案"
 
 ## 命名约定
 
-- `page_name`：前缀 `wealth_`，snake_case；**页面可新增**（查 registry 复用存量页）；团队可自定前缀，确认单锁定
-- `event_name`（英）：**默认来源 = 事件名称字典** + `_view` / `_click` / `_show`
-  - 理财线示例：`wealth_home_*` 或 `wealth_fund_*`
-  - **禁止**默认使用 registry 细名
+- `page_name`：前缀 `wealth_`，snake_case；**页面可新增**（查 registry 复用存量页）
+- `event_name`（英）：**唯一来源 = 事件名称字典** + `_view` / `_click` / `_show`
+  - 理财线默认：`wealth_home_*` 或 `wealth_fund_*`
+  - **禁止**默认使用 registry 细名（`wealth_product_detail` / `wealth_buy` / `Wealth_FAQ` 等）
   - 多页共用同一前缀，靠 page / module / element 区分
+  - 详见 [references/event-name-dictionary.md](references/event-name-dictionary.md)
 - `event_name`（中）：须含动作词；字典默认如「理财基金浏览 / 理财基金点击」
 - `module_name` / `element_name`：registry + `element_name.txt`（元素允许新增）
 
@@ -45,7 +46,7 @@ python3 scripts/lookup_element_names.py --suggest "按钮文案"
 
 ## Excel 列（15 列，无「前导页面」）
 
-表头为中文主标题 + 英文 field key 副标题（换行）：
+表头为中文主标题 + 英文 field key 副标题（换行），与团队存量 Excel 一致：
 
 | 列 | 表头（单元格内换行） |
 |----|---------------------|
@@ -96,32 +97,48 @@ python3 scripts/lookup_element_names.py --suggest "按钮文案"
 
 ## PRD 内联埋点表格
 
-横向 5 列：**event_name · page_name · module_name · element_name · anchor**；纵向 2 行：**中文 / 英文**。
+横向 5 列（**表头写死为英文 field key**）：**`event_name` · `page_name` · `module_name` · `element_name` · `anchor`**；纵向 2 行：**中文 / 英文**。
+
+> ⚠️ 勿与 Excel 提报表头混淆：Excel 用「事件名称 / 页面名称 / …」中文列；**PRD 内联表只用英文 field key**。手写中文列头视为错误交付。
 
 不展示：埋点分类、元素位置、track_id、埋点编号表内重复字段（编号仅保留在标题 `埋点映射（F02-IX01）`）。
 
 **排版硬约束（写死）**：TRACKING 注释、`**埋点映射**`、表的每一行必须**顶格**（行首无空格/Tab）。由 `prd_tracking_table.py` 强制；禁止 build 脚本再缩进。否则 GFM Preview 表格会消失。
 
+**生成硬约束（写死）**：必须调用 `prd_tracking_table.py` 生成表；写出 PRD 后由 **Agent 自动** `--check` / `validate_prd_tracking_tables`，通过才可汇报交付。**禁止**让用户手动跑校验；**禁止** Agent 手搓表。
+
+唯一合法表头行：
+
+```text
+| | event_name | page_name | module_name | element_name | anchor |
+```
+
+禁止：
+
+```text
+| | 事件名称 | 页面名称 | 模块名称 | 元素名称 | 锚点 |
+```
+
 ### 点击事件
 
-**格式硬约束：一句功能描述 + 一张埋点表（一一对应）；表顶格。**
+**格式硬约束：一句功能描述 + 一张埋点表（一一对应）；表顶格；表头英文 field key。**
 
 ```markdown
-- 用户点击「了解详情」后，当前页面蒙层展示弹窗。
-<!-- TRACKING:F02-IX01:BEGIN -->
-**埋点映射（F02-IX01）**
+- 点击左上角返回，返回进入 H5 前的页面上下文。
+<!-- TRACKING:F06-IX01:BEGIN -->
+**埋点映射（F06-IX01）**
 
 | | event_name | page_name | module_name | element_name | anchor |
 | --- | --- | --- | --- | --- | --- |
-| 中文 | 理财基金点击 | 组合产品详情页 | 产品信息 | 了解详情 | — |
-| 英文 | `wealth_fund_click` | `wealth_portfolio_detail` | `product_info` | `learn_detail_click` | `[data-ann="learn-more"]` |
-<!-- TRACKING:F02-IX01:END -->
+| 中文 | 理财基金点击 | 常见问题 H5 | 页面上方 | 返回上一页 | — |
+| 英文 | `wealth_fund_click` | `wealth_ac_share_faq` | `page_top` | `back_to` | `[data-ann="faq-back"]` |
+<!-- TRACKING:F06-IX01:END -->
 ```
 
-- **表格必须顶格**：勿给表加缩进。
-- **锚点**：写在英文行；中文行填 `—`。
-- **状态结果句**：不插表。
-- **浏览事件**：只对逻辑页面有效；放在功能节标题下、`#### 业务描述` 之前；模块、元素填 `—`。
+- **表格必须顶格**：勿给表加缩进。列表项下缩进表格时，源码可见但 VS Code/Cursor Preview（GFM）常不渲染、看起来像「消失」。
+- **锚点**：写在英文行；中文行填 `—`（selector 无中文名）。
+- **状态结果句**（关闭回原位、跳转后定位等）：不插表。
+- **浏览事件**：只对逻辑页面有效；放在功能节标题下、`#### 业务描述` 之前；模块、元素填 `—`；**禁止**挂在点击交互句下。
 
 ### 浏览事件
 
@@ -133,8 +150,8 @@ python3 scripts/lookup_element_names.py --suggest "按钮文案"
 
 | | event_name | page_name | module_name | element_name | anchor |
 | --- | --- | --- | --- | --- | --- |
-| 中文 | 理财基金浏览 | 组合产品详情页 | — | — | — |
-| 英文 | `wealth_fund_view` | `wealth_portfolio_detail` | — | — | `section.screen` |
+| 中文 | 产品详情页浏览 | 基金详情页 | — | — | — |
+| 英文 | `wealth_product_detail_view` | `wealth_fund_product_detail` | — | — | `section.phone` |
 <!-- TRACKING:F02-V01:END -->
 
 #### 业务描述

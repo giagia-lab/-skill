@@ -7,6 +7,7 @@
 - 三阶段门禁：页面级《埋点确认单》（**事件名称前置**）→ Excel + `tracking-spec.json` → PRD 内联埋点表 + HTML `data-track-*`
 - `event_name` 默认来自示例事件名称字典（可替换）；中文事件名须含动作词
 - PRD 内联表强制顶格，避免 Markdown Preview 表格消失
+- PRD 内联表头写死为英文 field key（`event_name` / `page_name` / …）；阶段 3 由 Agent 自动 `--check`，使用者无需手动跑校验
 - 支持多页面 HTML、曝光事件、本地存量知识库检索
 - 敏感数据（存量 Excel、element 映射表、registry 索引）**仅本地维护，不入库**
 
